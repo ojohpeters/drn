@@ -41,7 +41,7 @@ const PORT = process.env.PORT || 3002;
 
 app.use(
   cors({
-    origin: "http://localhost:5173", // Replace with your frontend URL
+    origin: ["https://monero-front.vercel.app", "https://monero-front.vercel.app/"],
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type"],
   })
