@@ -1,9 +1,10 @@
+import fetch from 'node-fetch';
 const express = require("express");
 const serverless = require("serverless-http");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const dotenv = require("dotenv");
-const fetch = require("node-fetch");
+
 
 dotenv.config();
 
