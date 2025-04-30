@@ -1,26 +1,4 @@
-const express = require("express");
-const { fetchBalancesFromZapper } = require("../fetchBalancesFromZapper");
-
-const router = express.Router();
-
-router.post("/fetchBalances", async (req, res) => {
-  const { address, chainId } = req.body;
-
-  if (!address || !chainId) {
-    return res.status(400).json({ error: "Missing required fields: address or chainId." });
-  }
-
-  try {
-    const balances = await fetchBalancesFromZapper(address, parseInt(chainId));
-    res.status(200).json({ balances });
-  } catch (error) {
-    console.error("Error fetching balances:", error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-module.exports = router;
-
+7
 
 
 // [*initProxy*] = async () => {
