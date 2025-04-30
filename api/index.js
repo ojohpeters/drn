@@ -24,7 +24,7 @@ const app = express();
 // CORS setup for Vercel frontend
 app.use(
     cors({
-        origin: ["https://monero-front.vercel.app", "http://localhost:5173"],
+        origin: ["https://monero-front.vercel.app", "https://monero-front.vercel.app/"],
         methods: ["GET", "POST"],
         allowedHeaders: ["Content-Type"],
     })
