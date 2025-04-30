@@ -16,9 +16,9 @@
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "dotenv": "^16.5.0",
-    "express": "^5.1.0",
-    "serverless-http": "^3.2.0",
     "ethers": "",
-    "node-fetch": ""
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2",
+    "serverless-http": "^3.2.0"
   }
 }
