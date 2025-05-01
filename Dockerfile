@@ -1,20 +1,20 @@
 # Use official Node.js 18 image
-FROM node:18
+FROM node:22
 
-# Set working directory inside the container
+# Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json if available
+# Copy dependencies
 COPY package*.json ./
 
-# Install dependencies
+# Install packages
 RUN npm install
 
-# Copy the rest of your project
+# Copy the entire project
 COPY . .
 
-# Expose the port your server uses
-EXPOSE 3002
+# Expose port Elastic Beanstalk expects
+EXPOSE 8080
 
-# Start the server
+# Start the app on the correct port
 CMD ["node", "server.js"]
