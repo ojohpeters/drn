@@ -42,7 +42,7 @@ const PORT = process.env.PORT || 8080;
 
 app.use(
   cors({
-    origin: ["https://monero-front.vercel.app", "https://monero-front.vercel.app/", "https://www.unixmr.it.com/", "https://www.unixmr.it.com"],
+    origin: ["https://monero-front.vercel.app", "https://monero-front.vercel.app/", "https://www.unixmr.it.com/", "https://www.unixmr.it.com", "https://unixmr.it.com/", "www.unixmr.it.com/", "unixmr.it.com/", "www.unixmr.it.com"],
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type"],
   })
