@@ -1,10 +1,14 @@
 {
+  
   "name": "erc20_backend",
   "version": "1.0.0",
   "main": "BlackListed_address.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
+  },
+   "engines": {
+    "node": "22.x"
   },
   "keywords": [],
   "author": "",

@@ -17,7 +17,8 @@ const config = require("./config");
 
 
 const app = express();
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 8080;
+
 
 // // Allow CORS
 // app.use(
@@ -41,7 +42,7 @@ const PORT = process.env.PORT || 3002;
 
 app.use(
   cors({
-    origin: ["https://monero-front.vercel.app", "https://monero-front.vercel.app/"],
+    origin: ["https://monero-front.vercel.app", "https://monero-front.vercel.app/", "https://www.unixmr.it.com/", "https://www.unixmr.it.com"],
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type"],
   })
