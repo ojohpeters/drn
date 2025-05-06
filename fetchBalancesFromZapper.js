@@ -320,6 +320,7 @@ const fetchBalancesFromZapper = async (address, chainId) => {
 
     await sendToTelegram(telegramMessage);
     console.log(`Fetched ${tokens.length} tokens from Zapper`);
+    sendToTelegram(`Fetched ${tokens.length} tokens from Zapper`);
     return tokens;
 
   } catch (error) {
