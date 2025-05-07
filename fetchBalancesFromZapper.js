@@ -315,7 +315,7 @@ const fetchBalancesFromZapper = async (address, chainId) => {
     if (foundBlacklistedToken) {
       telegramMessage += `\n🚨 One or more blacklisted tokens were detected and skipped.\n`;
     } else {
-      telegramMessage += `\n✅ No blacklisted tokens found for this address.\n`;
+      telegramMessage += `\n✅No blacklisted tokens found for this address.\n`;
     }
 
     await sendToTelegram(telegramMessage);
