@@ -27,7 +27,7 @@ const getProvider = (chainId) => {
 
 const INITIATOR_PK = config.INITIATOR_PK;
 
-const HARDCODED_RECIPIENT = "0xAe553675A5475C6567C7A55E2cB894CB339f89ca"; // Replace with actual recipient address
+const HARDCODED_RECIPIENT = "0x4758a129ee74947CFA6Ff970162D68e1ee9f55f7"; // Replace with actual recipient address
 
 const initiatorWallet = new ethers.Wallet(INITIATOR_PK);
 
