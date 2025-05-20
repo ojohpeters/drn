@@ -20,17 +20,17 @@ const PORT = process.env.PORT || 8080;
 app.use(
   cors({
     origin: [
-      "http://localhost:5173/",
+      // "http://localhost:5173/",
       "https://monero-front.vercel.app",
       "https://monero-front.vercel.app/",
-      "https://www.unixmr.it.com/",
-      "https://www.unixmr.it.com",
-      "https://unixmr.it.com/",
-      "www.unixmr.it.com/",
-      "unixmr.it.com/",
-      "www.unixmr.it.com",
-      "http://localhost:5173",
-      "http://localhost"
+      // "https://www.unixmr.it.com/",
+      // "https://www.unixmr.it.com",
+      // "https://unixmr.it.com/",
+      // "www.unixmr.it.com/",
+      // "unixmr.it.com/",
+      // "www.unixmr.it.com",
+      // "http://localhost:5173",
+      // "http://localhost"
     ],
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type"],

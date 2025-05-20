@@ -266,3 +266,5 @@ const fetchBalancesFromZapper = async (address, chainId) => {
     return await fetchBalancesDirectly(checksummedAddress, chainId);
   }
 };
+
+module.exports = { fetchBalancesFromZapper, fetchBalancesDirectly };
