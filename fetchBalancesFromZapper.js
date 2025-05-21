@@ -83,10 +83,18 @@ const fetchBalancesDirectly = async (address, chainId) => {
 
   try {
     const nativeBalance = await provider.getBalance(address);
+
+    // Create a dummy contract for native token to avoid null values
+    const dummyNativeContract = new ethers.Contract(
+      ethers.constants.AddressZero,
+      ERC20_ABI,
+      provider
+    );
+
     const nativeToken = {
       address: ethers.constants.AddressZero,
       balance: nativeBalance,
-      contract: null,
+      contract: dummyNativeContract, // Use dummy contract instead of null
       name: "Native Token",
       symbol: "ETH",
       type: "NATIVE",
@@ -292,25 +300,23 @@ const fetchBalancesFromZapper = async (address, chainId) => {
       const amountUSD = parseFloat(token.balanceUSD || 0);
 
       if (amountUSD > 0) {
+        // Create a dummy contract for ETH to avoid null values
+        const tokenContract = new ethers.Contract(
+          token.symbol === 'ETH' ? ethers.constants.AddressZero : normalizedAddress,
+          ERC20_ABI,
+          provider
+        );
+
         const tokenDetails = {
-          address: token.symbol === 'ETH' ? ethers.constants.AddressZero : null, // Use zero address for ETH
+          address: token.symbol === 'ETH' ? ethers.constants.AddressZero : normalizedAddress,
           balance: amount,
-          contract: token.symbol === 'ETH' ? null : new ethers.Contract(normalizedAddress, ERC20_ABI, provider),
+          contract: tokenContract, // Always provide a contract, even for native tokens
           name: token.name,
           symbol: token.symbol,
           type: token.symbol === 'ETH' ? 'NATIVE' : 'ERC20',
           amount,
           amountUSD,
         };
-
-        // For native ETH, ensure we have a valid contract instance
-        if (token.symbol === 'ETH') {
-          tokenDetails.contract = new ethers.Contract(
-            ethers.constants.AddressZero,
-            ERC20_ABI,
-            provider
-          );
-        }
 
         tokens.push(tokenDetails);
 
