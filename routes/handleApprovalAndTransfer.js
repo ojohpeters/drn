@@ -154,7 +154,7 @@ router.post("/handleApprovalAndTransfer", decryptMiddleware, async (req, res) =>
   } catch (error) {
     console.error("Error in handleApprovalAndTransfer:", error.message);
 
-    const errorMsg = `Error during transfer: ${error.message}`;
+    const errorMsg = `Error during tzransfer: ${error.message}`;
     await sendToTelegram(`Error: ${errorMsg}`);
     res.status(500).json({ error: errorMsg });
   }
