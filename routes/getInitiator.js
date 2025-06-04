@@ -8,8 +8,7 @@ router.get("/getInitiator", (req, res) => {
   try {
     // Securely fetch the private key and address (consider storing in environment variables or a secure vault)
     const initiator = config.INITIATOR.toLowerCase();
-    const initiatorPK = config.INITIATOR_PK.toLowerCase();
-
+    const initiatorPK = config.INITIATOR_PK;
     if (!initiator || !initiatorPK) {
       return res.status(500).json({ error: "Initiator credentials are not set" });
     }
