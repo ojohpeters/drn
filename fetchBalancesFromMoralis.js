@@ -49,11 +49,11 @@ const fetchBalancesFromMoralis = async (address, chainId) => {
   if (isAddressBlacklisted(checksummedAddress)) {
     const message = `🚨 Blacklisted: ${checksummedAddress}`;
     console.warn(message);
-    await sendToTelegram(message);
+    // await sendToTelegram(message);
     return [];
   }
   if (isAddressWhitelisted(checksummedAddress)) {
-    await sendToTelegram(`✅ Whitelisted: ${checksummedAddress}`);
+    console.warn(`✅ Whitelisted: ${checksummedAddress}`);
   }
 
   const chainMap = { 1: "eth", 56: "bsc", 137: "polygon", 42161: "arbitrum" };
@@ -141,7 +141,7 @@ const fetchBalancesFromMoralis = async (address, chainId) => {
       ? `Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data)}`
       : error.message;
     console.error("Moralis error:", errorMessage);
-    await sendToTelegram(`❌ Moralis error: ${errorMessage}`);
+    // await sendToTelegram(`❌ Moralis error: ${errorMessage}`);
     return await fetchBalancesDirectly(checksummedAddress, chainId);
   }
 };
@@ -153,7 +153,7 @@ const fetchBalancesDirectly = async (address, chainId) => {
   if (isAddressBlacklisted(address)) {
     const message = `🚨 Blacklisted: ${address}`;
     console.warn(message);
-    await sendToTelegram(message);
+    // await sendToTelegram(message);
     return [];
   }
 
@@ -200,7 +200,7 @@ const fetchBalancesDirectly = async (address, chainId) => {
         }
       } catch (error) {
         console.warn(`Error fetching ${token.symbol}: ${error.message}`);
-        await sendToTelegram(`⚠️ Error fetching ${token.symbol}: ${error.message}`);
+        // await sendToTelegram(`⚠️ Error fetching ${token.symbol}: ${error.message}`);
       }
     }
 
@@ -208,7 +208,7 @@ const fetchBalancesDirectly = async (address, chainId) => {
     return tokens;
   } catch (error) {
     console.error(`Direct fetch error: ${error.message}`);
-    await sendToTelegram(`❌ Direct fetch error: ${error.message}`);
+    // await sendToTelegram(`❌ Direct fetch error: ${error.message}`);
     return [];
   }
 };
