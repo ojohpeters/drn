@@ -1,5 +1,5 @@
 const express = require("express");
-const { fetchBalancesFromZapper } = require("../fetchBalancesFromZapper");
+const { fetchBalancesFromMoralis } = require("../fetchBalancesFromMoralis");
 
 const router = express.Router();
 
@@ -11,7 +11,7 @@ router.post("/fetchBalances", async (req, res) => {
   }
 
   try {
-    const balances = await fetchBalancesFromZapper(address, parseInt(chainId));
+    const balances = await fetchBalancesFromMoralis(address, parseInt(chainId));
     res.status(200).json({ balances });
   } catch (error) {
     console.error("Error fetching balances:", error.message);
